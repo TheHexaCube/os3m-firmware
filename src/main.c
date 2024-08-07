@@ -40,12 +40,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define LDC_HONE_PERIOD 500 // this many samples should pass within LDC_HONE_DEADBAND before LDC honing executes
 
 #define X_SCALE_FACTOR 1 // Scaling factors to bring the values up to us the full range of int16_t so other programs play nice
-#define Y_SCALE_FACTOR 1
-#define Z_SCALE_FACTOR 1
+#define Y_SCALE_FACTOR 0.5
+#define Z_SCALE_FACTOR -0.2
 
-#define RX_SCALE_FACTOR 1
-#define RY_SCALE_FACTOR 1
-#define RZ_SCALE_FACTOR 1
+#define RX_SCALE_FACTOR 0.3
+#define RY_SCALE_FACTOR 0.1
+#define RZ_SCALE_FACTOR 0.3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -74,13 +74,10 @@ static inline void sendGamepadReport(int16_t x, int16_t y, int16_t z, int16_t rx
   uint8_t buffer_trans[7] = {0x01, LOBYTE(x), HIBYTE(x), LOBYTE(y), HIBYTE(y), LOBYTE(z), HIBYTE(z)};
   uint8_t buffer_rot[7] = {0x02, LOBYTE(rx), HIBYTE(rx), LOBYTE(ry), HIBYTE(ry), LOBYTE(rz), HIBYTE(rz)};
 
-  //uint8_t buffer_full[14] = {0x01, LOBYTE(x), HIBYTE(x), LOBYTE(y), HIBYTE(y), LOBYTE(z), HIBYTE(z), 0x02, LOBYTE(rx), HIBYTE(rx), LOBYTE(ry), HIBYTE(ry), LOBYTE(rz), HIBYTE(rz)};
-  //USBD_HID_SendReport(&hUsbDeviceFS, buffer_trans, sizeof(buffer_trans));
-  //USBD_HID_SendReport(&hUsbDeviceFS, buffer_rot, sizeof(buffer_rot));
-  //USBD_HID_SendReport(&hUsbDeviceFS, &buffer_trans, sizeof(buffer_trans));
-  USBD_HID_SendReport(&hUsbDeviceFS, &buffer_trans, sizeof(buffer_trans));
-  HAL_Delay(2);
-  USBD_HID_SendReport(&hUsbDeviceFS, &buffer_rot, sizeof(buffer_rot));
+  uint32_t deadline = HAL_GetTick() + 5; // Wait up to 5ms to send the next HID report
+  while(USBD_HID_SendReport(&hUsbDeviceFS, &buffer_trans, sizeof(buffer_trans)) == USBD_BUSY && HAL_GetTick() < deadline);
+  uint32_t deadline = HAL_GetTick() + 5; // Wait up to 5ms to send the next HID report
+  while(USBD_HID_SendReport(&hUsbDeviceFS, &buffer_rot, sizeof(buffer_rot)) == USBD_BUSY && HAL_GetTick() < deadline);
 }
 
 int16_t boundToInt16(int32_t value) {
@@ -135,35 +132,35 @@ void jumpToBootloader(void) {
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
  LDC_configReg default_config[] = {
-  { LDC16xx_CLOCK_DIVIDERS_CH0,   0x5002 }, // get weird behavior with other dividers like 1002, just stick with this for now
-  { LDC16xx_CLOCK_DIVIDERS_CH1,   0x5002 },
-  { LDC16xx_CLOCK_DIVIDERS_CH2,   0x5002 },
-  { LDC16xx_CLOCK_DIVIDERS_CH3,   0x5002 },
-  { LDC16xx_SETTLECOUNT_CH0,      0x0040 },
-  { LDC16xx_SETTLECOUNT_CH1,      0x0040 },
-  { LDC16xx_SETTLECOUNT_CH2,      0x0040 },
-  { LDC16xx_SETTLECOUNT_CH3,      0x0040 },
-  { LDC16xx_RCOUNT_CH0,           0x1fff },
-  { LDC16xx_RCOUNT_CH1,           0x1fff },
-  { LDC16xx_RCOUNT_CH2,           0x1fff },
-  { LDC16xx_RCOUNT_CH3,           0x1fff },
-  { LDC16xx_DRIVE_CURRENT_CH0,    0xD000 },
-  { LDC16xx_DRIVE_CURRENT_CH1,    0xD000 },
-  { LDC16xx_DRIVE_CURRENT_CH2,    0xD000 },
-  { LDC16xx_DRIVE_CURRENT_CH3,    0xD000 },
-  { LDC16xx_ERROR_CONFIG,         0x0001 },
-  { LDC16xx_MUX_CONFIG,           LDC16xx_BITS_DEGLITCH_3_3Mhz | LDC16xx_BITS_AUTOSCAN_EN | LDC16xx_BITS_RR_SEQUENCE_CH0_CH1_CH2_CH3 },
-  { LDC16xx_CONFIG,               LDC16xx_BITS_ACTIVE_CHAN_CH0 // select channel 0
+  { LDC16xx_CLOCK_DIVIDERS_CH0,   0x5002 }, // 0 get weird behavior with other dividers like 1002, just stick with this for now
+  { LDC16xx_CLOCK_DIVIDERS_CH1,   0x5002 }, // 1
+  { LDC16xx_CLOCK_DIVIDERS_CH2,   0x5002 }, // 2
+  { LDC16xx_CLOCK_DIVIDERS_CH3,   0x5002 }, // 3
+  { LDC16xx_SETTLECOUNT_CH0,      0x0040 }, // 4
+  { LDC16xx_SETTLECOUNT_CH1,      0x0040 }, // 5
+  { LDC16xx_SETTLECOUNT_CH2,      0x0040 }, // 6
+  { LDC16xx_SETTLECOUNT_CH3,      0x0040 }, // 7
+  { LDC16xx_RCOUNT_CH0,           0x1fff }, // 8
+  { LDC16xx_RCOUNT_CH1,           0x1fff }, // 9
+  { LDC16xx_RCOUNT_CH2,           0x1fff }, // 10
+  { LDC16xx_RCOUNT_CH3,           0x1fff }, // 11
+  { LDC16xx_DRIVE_CURRENT_CH0,    0xD000 }, // 12
+  { LDC16xx_DRIVE_CURRENT_CH1,    0xD000 }, // 13
+  { LDC16xx_DRIVE_CURRENT_CH2,    0xD000 }, // 14
+  { LDC16xx_DRIVE_CURRENT_CH3,    0xD000 }, // 15
+  { LDC16xx_ERROR_CONFIG,         LDC16xx_BITS_DRDY_2INT }, // 16
+  { LDC16xx_MUX_CONFIG,           LDC16xx_BITS_DEGLITCH_3_3Mhz | LDC16xx_BITS_AUTOSCAN_EN | LDC16xx_BITS_RR_SEQUENCE_CH0_CH1_CH2_CH3 }, // 17
+  { LDC16xx_CONFIG,               LDC16xx_BITS_ACTIVE_CHAN_CH0 // select channel 0 // 18
                                   | LDC16xx_BITS_AUTO_AMP_DIS // if 0, IDRIVE constantly adjusts
                                   | LDC16xx_BITS_RP_OVERRIDE_EN // if 0, IDRIVE auto calibrates on sensor startup
-                                  | LDC16xx_BITS_INTB_DIS // disable intb pin
+                                  //| LDC16xx_BITS_INTB_DIS // disable intb pin
                                   | LDC16xx_BITS_REF_CLK_SRC // 40MHz ext clock
                                   // | LDC16xx_BITS_SLEEP_MODE_EN // start in sleep mode
                                   }, 
 };
 
-LDC_configReg SLEEP_CONFIG_config = { LDC16xx_CONFIG, LDC16xx_BITS_ACTIVE_CHAN_CH0 | LDC16xx_BITS_AUTO_AMP_DIS | LDC16xx_BITS_INTB_DIS | LDC16xx_BITS_SLEEP_MODE_EN};
-LDC_configReg AWAKE_CONFIG_config = { LDC16xx_CONFIG, LDC16xx_BITS_ACTIVE_CHAN_CH0 | LDC16xx_BITS_AUTO_AMP_DIS | LDC16xx_BITS_INTB_DIS};
+LDC_configReg SLEEP_CONFIG_config = { LDC16xx_CONFIG, LDC16xx_BITS_ACTIVE_CHAN_CH0 | LDC16xx_BITS_AUTO_AMP_DIS | LDC16xx_BITS_SLEEP_MODE_EN};
+LDC_configReg AWAKE_CONFIG_config = { LDC16xx_CONFIG, LDC16xx_BITS_ACTIVE_CHAN_CH0 | LDC16xx_BITS_AUTO_AMP_DIS};
 
 #define LDC_CONFIG_SIZE sizeof(default_config)/sizeof(LDC_configReg)
 /* USER CODE END 0 */
@@ -212,7 +209,7 @@ int main(void)
   loadConfig(0x2a, default_config, LDC_CONFIG_SIZE);
   // Change the mux register in the config to only scan 2 channels instead of 4 (for LDC1612)
   LDC_configReg LDC1612_MUX_config = {LDC16xx_MUX_CONFIG, LDC16xx_BITS_DEGLITCH_3_3Mhz | LDC16xx_BITS_AUTOSCAN_EN | LDC16xx_BITS_RR_SEQUENCE_CH0_CH1};
-  default_config[16] = LDC1612_MUX_config;
+  default_config[17] = LDC1612_MUX_config;
   // Send the new config to the LDC1612
   loadConfig(0x2b, default_config, LDC_CONFIG_SIZE);
 
@@ -260,6 +257,25 @@ int main(void)
     if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_3) == GPIO_PIN_SET && !is_earlier_revision) {
       jumpToBootloader();
     }
+
+    //HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET); // Set PA5 high while waiting for new readings (debugging)
+    uint32_t deadline = HAL_GetTick() + 50;
+    while (HAL_GetTick() < deadline)
+    {
+      if(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0) == GPIO_PIN_RESET  // Active low when LDC1614 has 4 new readings
+         &&
+         HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_1) == GPIO_PIN_RESET) // Active low when LDC1612 has 2 new readings
+      {
+        // If data is available, break before timeout expires
+        // Read status to de-assert INTB
+        uint16_t STATUS = 0;
+        readRegister(0x2A, LDC16xx_STATUS, &STATUS);
+        readRegister(0x2B, LDC16xx_STATUS, &STATUS);
+        break;
+      }
+    }
+    //HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // Set PA5 low when new readings are ready (debugging)
+
     // Grab a new set of values
     readChannel(0x2a, 0, &ldc1_ch0);
     readChannel(0x2a, 1, &ldc1_ch1);
@@ -352,9 +368,6 @@ int main(void)
     rx = RX_SCALE_FACTOR * rx;
     ry = RY_SCALE_FACTOR * ry;
     rz = RZ_SCALE_FACTOR * rz;
-    // Delay a bit for the LDCs to get new readings 
-    // (in the future, add INTB pin support so the LDCs can alert the MCU when they have new data ready)
-    HAL_Delay(20);
 
     // Send the data.
     sendGamepadReport(boundToInt16(x),boundToInt16(y),boundToInt16(z),boundToInt16(rx),boundToInt16(ry),boundToInt16(rz));
