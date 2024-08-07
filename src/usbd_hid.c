@@ -610,6 +610,10 @@ uint8_t USBD_HID_SendReport(USBD_HandleTypeDef  *pdev,
                        report,
                        len);
     }
+    else
+    {
+      return USBD_BUSY;
+    }
   }
   return USBD_OK;
 }
